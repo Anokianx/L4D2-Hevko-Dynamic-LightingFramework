@@ -1,0 +1,225 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "models\weapons\v_models\your_mod\diffuse" //Modify the path here//
+	"$selfillum" "1"
+	"$selfillummask" "models\weapons\v_models\your_mod\glow_mask" //Modify the path here//
+	"$selfillumtint" "[1.20 1.12 1.36]"
+	"$hevko_project" "Hevko"
+	"$hevko_author" "Anokianx"
+	"$hevko_t" "1.0"
+	"$hevko_half" "0.5"
+	"$hevko_one" "1.0"
+	"$hevko_two" "2.0"
+	"$hevko_w0" "0.0"
+	"$hevko_w1" "0.0"
+	"$hevko_w2" "1.0"
+	"$hevko_invt" "0.0"
+	"$hevko_c_low" "[2.00 0.22 0.34]"
+	"$hevko_c_mid" "[1.60 1.24 0.36]"
+	"$hevko_c_high" "[1.20 1.12 1.36]"
+	"$hevko_v0" "[0 0 0]"
+	"$hevko_v1" "[0 0 0]"
+	"$hevko_v2" "[0 0 0]"
+	"$hevko_t0" "[0 0 0]"
+	"$hevko_t1" "[0 0 0]"
+	"$hevko_t2" "[0 0 0]"
+	"$hevko_rgb" "[1.20 1.12 1.36]"
+	"$hevko_s_calm" "1.0"
+	"$hevko_s_alert" "1.0"
+	"$hevko_p0" "1.0"
+	"$hevko_p1" "0.0"
+	"$hevko_pulse" "1.0"
+	"$hevko_vp" "[1 1 1]"
+	"Proxies"
+	{
+		"MaterialModify"
+		{
+			"dummy" "0"
+		}
+		"Clamp"
+		{
+			"srcVar1" "$hevko_t"
+			"min" "0.0"
+			"max" "1.0"
+			"resultVar" "$hevko_t"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_t"
+			"srcVar2" "$hevko_two"
+			"resultVar" "$hevko_w1"
+		}
+		"Clamp"
+		{
+			"srcVar1" "$hevko_w1"
+			"min" "0.0"
+			"max" "1.0"
+			"resultVar" "$hevko_w1"
+		}
+		"Subtract"
+		{
+			"srcVar1" "$hevko_t"
+			"srcVar2" "$hevko_half"
+			"resultVar" "$hevko_w2"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_w2"
+			"srcVar2" "$hevko_two"
+			"resultVar" "$hevko_w2"
+		}
+		"Clamp"
+		{
+			"srcVar1" "$hevko_w2"
+			"min" "0.0"
+			"max" "1.0"
+			"resultVar" "$hevko_w2"
+		}
+		"Subtract"
+		{
+			"srcVar1" "$hevko_one"
+			"srcVar2" "$hevko_w1"
+			"resultVar" "$hevko_w0"
+		}
+		"Subtract"
+		{
+			"srcVar1" "$hevko_w1"
+			"srcVar2" "$hevko_w2"
+			"resultVar" "$hevko_w1"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w0"
+			"resultVar" "$hevko_v0[0]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w0"
+			"resultVar" "$hevko_v0[1]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w0"
+			"resultVar" "$hevko_v0[2]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w1"
+			"resultVar" "$hevko_v1[0]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w1"
+			"resultVar" "$hevko_v1[1]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w1"
+			"resultVar" "$hevko_v1[2]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w2"
+			"resultVar" "$hevko_v2[0]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w2"
+			"resultVar" "$hevko_v2[1]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_w2"
+			"resultVar" "$hevko_v2[2]"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_c_low"
+			"srcVar2" "$hevko_v0"
+			"resultVar" "$hevko_t0"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_c_mid"
+			"srcVar2" "$hevko_v1"
+			"resultVar" "$hevko_t1"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_c_high"
+			"srcVar2" "$hevko_v2"
+			"resultVar" "$hevko_t2"
+		}
+		"Add"
+		{
+			"srcVar1" "$hevko_t0"
+			"srcVar2" "$hevko_t1"
+			"resultVar" "$hevko_rgb"
+		}
+		"Add"
+		{
+			"srcVar1" "$hevko_rgb"
+			"srcVar2" "$hevko_t2"
+			"resultVar" "$hevko_rgb"
+		}
+		"Sine"
+		{
+			"sineperiod" "3.6"
+			"sinemin" "0.86"
+			"sinemax" "1.12"
+			"resultVar" "$hevko_s_calm"
+		}
+		"Sine"
+		{
+			"sineperiod" "0.85"
+			"sinemin" "0.68"
+			"sinemax" "1.32"
+			"resultVar" "$hevko_s_alert"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_s_calm"
+			"srcVar2" "$hevko_t"
+			"resultVar" "$hevko_p0"
+		}
+		"Subtract"
+		{
+			"srcVar1" "$hevko_one"
+			"srcVar2" "$hevko_t"
+			"resultVar" "$hevko_invt"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_s_alert"
+			"srcVar2" "$hevko_invt"
+			"resultVar" "$hevko_p1"
+		}
+		"Add"
+		{
+			"srcVar1" "$hevko_p0"
+			"srcVar2" "$hevko_p1"
+			"resultVar" "$hevko_pulse"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_pulse"
+			"resultVar" "$hevko_vp[0]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_pulse"
+			"resultVar" "$hevko_vp[1]"
+		}
+		"Equals"
+		{
+			"srcVar1" "$hevko_pulse"
+			"resultVar" "$hevko_vp[2]"
+		}
+		"Multiply"
+		{
+			"srcVar1" "$hevko_rgb"
+			"srcVar2" "$hevko_vp"
+			"resultVar" "$selfillumtint"
+		}
+	}
+}

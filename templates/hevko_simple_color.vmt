@@ -1,0 +1,16 @@
+"VertexLitGeneric"
+{
+	"$basetexture" "models\weapons\v_models\your_mod\diffuse" //Modify the path here//
+	"$selfillum" "1"
+	"$selfillummask" "models\weapons\v_models\your_mod\glow_mask" //Modify the path here//
+	"$selfillumtint" "[1.10 1.05 1.35]"
+	"$hevko_project" "Hevko"
+	"$hevko_author" "Anokianx"
+	"Proxies"
+	{
+		"MaterialModify"
+		{
+			"dummy" "0"
+		}
+	}
+}

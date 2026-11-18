@@ -1,0 +1,3 @@
+if ("Hevko" in getroottable())
+{
+}
