@@ -7,22 +7,24 @@ Author: Anokianx
 Hevko is a universal, weapon-agnostic dynamic state-based lighting framework for *Left 4 Dead 2*. The core script calculates and outputs state values without being coupled to specific weapon models or texture effects, allowing it to be bundled directly into any weapon skin’s `.vpk` file.
 
 ## Features
-- **Built-in 3-Threshold Health Provider**: Automatically combines permanent health with temporary health (from pills/adrenaline) and treats "incapacitated" or "hanging from a ledge" states as a low-health warning zone; supports smooth interpolation.
+- **Built-in 3-Threshold Health Provider (`health`)**: Automatically combines permanent health with temporary health (from pills/adrenaline) and treats "incapacitated" or "hanging from a ledge" states as a low-health warning zone; supports smooth interpolation.
+- **Health Delta Toggle Provider (`health_delta`)**: Combines permanent and temporary health and toggles output `0.0` / `1.0` each time effective health changes by at least `thresholds.step` (default `20.0`) from the last switch point; resets anchor on respawn or map restart.
 - **Two Integration Modes**:
   1. `mode = "color"`: Requires no complex VMT mathematical expressions. Simply add `"MaterialModify" { "dummy" "0" }` to your `.vmt` file and define three distinct RGB color states within the weapon’s configuration.
-  2. `mode = "scalar"`: Outputs a smooth variable, `$hevko_t` (`0.0` for low, `0.5` for medium, `1.0` for high), which can be used within each weapon’s individual `.vmt` to drive color, pulsing rhythms, texture flow rates, or rotation speeds.
+  2. `mode = "scalar"`: Outputs a smooth variable, `$hevko_t` (`0.0` for low, `0.5` for medium, `1.0` for high, or `0.0` / `1.0` toggle with `health_delta`), which can be used within each weapon’s individual `.vmt` to drive color, pulsing rhythms, texture flow rates, or rotation speeds.
 
 ## Directory Structure
 - `scripts/vscripts/director_base_addon.nut`: Automatic initialization entry point.
 - `scripts/vscripts/hevko/core.nut`: Core engine for tracking multiple entities and handling smooth interpolation.
-- `scripts/vscripts/hevko/providers/health.nut`: Health-detection state provider.
+- `scripts/vscripts/hevko/providers/health.nut`: 3-threshold health-detection state provider.
+- `scripts/vscripts/hevko/providers/health_delta.nut`: Cumulative HP-delta toggle provider (`step = 20.0` default).
 - `scripts/vscripts/hevko/registry.nut`: Registry for loading weapon configuration files.
-- `scripts/vscripts/hevko/weapons/`: Individual weapon configuration files (e.g., `example_color.nut`, `example_scalar.nut`).
+- `scripts/vscripts/hevko/weapons/`: Individual weapon configuration files (e.g., `example_color.nut`, `example_scalar.nut`, `example_health_delta.nut`).
 - `templates/`: VMT template files.
 
 ## Quick Integration for Weapon Mods
 1. Copy the `scripts/` directory directly into your weapon mod’s folder.
-2. Create a new file at `scripts/vscripts/hevko/weapons/your_script_name.nut` (any ASCII filename is fine, e.g., your mod name or weapon name), copy one of the two templates below into it, and change the classname and material paths to match your mod.
+2. Create a new file at `scripts/vscripts/hevko/weapons/your_script_name.nut` (any ASCII filename is fine, e.g., your mod name or weapon name), copy one of the three templates below into it, and change the classname and material paths to match your mod.
 3. Add the line `IncludeScript("hevko/weapons/your_script_name", getroottable())` to `scripts/vscripts/hevko/registry.nut`. If your server already uses a different `director_base_addon.nut` collection, simply add `IncludeScript("hevko/core", getroottable())` along with the registration line to that file.
 4. In the `"Proxies"` section of each listed `.vmt` file, add `"MaterialModify" { "dummy" "0" }` (for `mode = "scalar"`, use `templates/hevko_scalar_unlit.vmt` or `templates/hevko_scalar_vertexlit.vmt`).
 
@@ -71,11 +73,31 @@ if ("Hevko" in getroottable())
 	})
 }
 ```
+Option C — Health Delta Toggle (`provider = "health_delta"`, toggles `0.0` <-> `1.0` every time effective HP changes by `step`):
+```squirrel
+if ("Hevko" in getroottable())
+{
+	::Hevko.RegisterWeapon("weapon_rifle", {
+		author = "Anokianx"
+		provider = "health_delta"
+		mode = "scalar"
+		varName = "$hevko_t"
+		defaultValue = "0.000"
+		lerpSpeed = 4.2
+		thresholds = {
+			step = 20.0
+		}
+		materials = [
+			"models/weapons/v_models/your_mod/glow_layer"
+		]
+	})
+}
+```
 Field reference:
 - First argument of `RegisterWeapon`: **must be the built-in L4D2 weapon classname** (not your mod name).
 - `materials`: list of `.vmt` paths relative to `materials/`, using `/` forward slashes, **without** leading `materials/` and **without** `.vmt` extension. You can also pass `{ material = "...", varName = "$color" }` to override `varName` per material, and optionally add `worldMaterials = [ ... ]` to limit third-person materials.
 - `varName`: target VMT variable to drive (e.g., `"$selfillumtint"` or `"$color"` for `mode = "color"`, `"$hevko_t"` for `mode = "scalar"`).
-- `thresholds`: `highMin` (>= High tier), `midMin` (>= Mid tier, below is Low tier).
+- `thresholds`: for `health`, `highMin` (>= High tier) and `midMin` (>= Mid tier, below is Low tier); for `health_delta`, `step` (minimum HP change in either direction required to flip `0.0 <-> 1.0`, default `20.0`).
 - `lerpSpeed`: transition smoothness speed (higher = faster, default `7.5`).
 
 ## Common L4D2 Weapon Classnames

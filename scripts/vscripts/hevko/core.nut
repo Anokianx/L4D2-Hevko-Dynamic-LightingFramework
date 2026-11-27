@@ -22,6 +22,8 @@ if (!("Hevko" in getroottable()))
 
 		Providers = {}
 		Weapons = {}
+		EventHooks = {}
+		TickHooks = {}
 
 		Runtime = {
 			booted = false
@@ -36,6 +38,33 @@ if (!("Hevko" in getroottable()))
 		function RegisterProvider(name, fn)
 		{
 			Providers[name] <- fn
+		}
+
+		function RegisterEventHook(eventName, id, fn)
+		{
+			if (!(eventName in EventHooks))
+			{
+				EventHooks[eventName] <- {}
+			}
+			EventHooks[eventName][id] <- fn
+		}
+
+		function RegisterTickHook(id, fn)
+		{
+			TickHooks[id] <- fn
+		}
+
+		function EmitEventHook(eventName, params)
+		{
+			if (!(eventName in EventHooks)) return
+			foreach (id, fn in EventHooks[eventName])
+			{
+				try
+				{
+					fn(params)
+				}
+				catch (e) {}
+			}
 		}
 
 		function RegisterWeapon(classname, spec)
@@ -483,6 +512,18 @@ if (!("Hevko" in getroottable()))
 				anyMoving = true
 			}
 
+			foreach (id, fn in TickHooks)
+			{
+				try
+				{
+					if (fn(dt, now))
+					{
+						anyMoving = true
+					}
+				}
+				catch (e) {}
+			}
+
 			local staleP = []
 			foreach (pid, st in Runtime.players)
 			{
@@ -547,6 +588,7 @@ if (!("Hevko" in getroottable()))
 			Runtime.worldBound.clear()
 			Runtime.thinkEnt = null
 			Runtime.lastTickTime = Time()
+			EmitEventHook("reset_runtime", {})
 		}
 
 		Events = {
@@ -572,6 +614,20 @@ if (!("Hevko" in getroottable()))
 			function OnGameEvent_item_pickup(params) { ::Hevko.ForcePulse() }
 			function OnGameEvent_player_bot_replace(params) { ::Hevko.ForcePulse() }
 			function OnGameEvent_bot_player_replace(params) { ::Hevko.ForcePulse() }
+			function OnGameEvent_weapon_reload(params)
+			{
+				::Hevko.EmitEventHook("weapon_reload", params)
+				::Hevko.ForcePulse()
+			}
+			function OnGameEvent_weapon_fire(params)
+			{
+				::Hevko.EmitEventHook("weapon_fire", params)
+				::Hevko.ForcePulse()
+			}
+			function OnGameEvent_player_say(params)
+			{
+				::Hevko.EmitEventHook("player_say", params)
+			}
 
 			function OnGameEvent_player_disconnect(params)
 			{
@@ -605,4 +661,5 @@ if (!("Hevko" in getroottable()))
 }
 
 IncludeScript("hevko/providers/health", getroottable())
+IncludeScript("hevko/providers/health_delta", getroottable())
 ::Hevko.Boot()

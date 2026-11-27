@@ -7,22 +7,24 @@ Autor: Anokianx
 Hevko es un framework de iluminación dinámica basado en estados, universal e independiente del arma, diseñado para *Left 4 Dead 2*. Su script principal calcula y genera valores de estado sin depender de modelos de armas o efectos de textura específicos, lo que permite integrarlo directamente en el archivo `.vpk` de cualquier *skin* (apariencia) de arma.
 
 ## Características
-- **Sistema de salud integrado con 3 umbrales**: Combina automáticamente la salud permanente con la salud temporal (proveniente de pastillas o adrenalina) y considera los estados de «incapacitado» o «colgando de un borde» como una zona de advertencia de salud baja; admite una interpolación fluida.
+- **Sistema de salud integrado con 3 umbrales (`health`)**: Combina automáticamente la salud permanente con la salud temporal (proveniente de pastillas o adrenalina) y considera los estados de «incapacitado» o «colgando de un borde» como una zona de advertencia de salud baja; admite una interpolación fluida.
+- **Proveedor por variación de salud (`health_delta`)**: Combina la salud permanente y temporal y alterna la salida entre `0.0` y `1.0` cada vez que la salud efectiva cambia al menos `thresholds.step` (por defecto `20.0`) desde el último cambio; reinicia el punto de referencia al reaparecer o reiniciar el mapa.
 - **Dos modos de integración**:
   1. `mode = "color"`: No requiere expresiones matemáticas complejas en los archivos VMT. Basta con añadir `"MaterialModify" { "dummy" "0" }` al archivo `.vmt` y definir tres estados de color RGB distintos dentro de la configuración del arma.
-  2. `mode = "scalar"`: Genera una variable continua, `$hevko_t` (`0.0` para salud baja, `0.5` para media, `1.0` para alta), que puede utilizarse en los archivos `.vmt` de cada arma para controlar cambios de color personalizados, efectos de pulsación, velocidades de flujo de texturas o velocidades de rotación.
+  2. `mode = "scalar"`: Genera una variable continua, `$hevko_t` (`0.0` para salud baja, `0.5` para media, `1.0` para alta, o alternancia `0.0` / `1.0` con `health_delta`), que puede utilizarse en los archivos `.vmt` de cada arma para controlar cambios de color personalizados, efectos de pulsación, velocidades de flujo de texturas o velocidades de rotación.
 
 ## Estructura de directorios
 - `scripts/vscripts/director_base_addon.nut`: Punto de entrada para la inicialización automática.
 - `scripts/vscripts/hevko/core.nut`: Motor principal encargado de realizar el seguimiento de múltiples entidades y gestionar la interpolación fluida.
-- `scripts/vscripts/hevko/providers/health.nut`: Módulo de estado para supervisar la salud del jugador.
+- `scripts/vscripts/hevko/providers/health.nut`: Módulo de estado con 3 umbrales de salud.
+- `scripts/vscripts/hevko/providers/health_delta.nut`: Módulo de alternancia por variación de salud (`step = 20.0` por defecto).
 - `scripts/vscripts/hevko/registry.nut`: Registro para cargar los archivos de configuración de las armas.
-- `scripts/vscripts/hevko/weapons/`: Archivos de configuración individuales para armas específicas (por ejemplo, `example_color.nut`, `example_scalar.nut`).
+- `scripts/vscripts/hevko/weapons/`: Archivos de configuración individuales para armas específicas (por ejemplo, `example_color.nut`, `example_scalar.nut`, `example_health_delta.nut`).
 - `templates/`: Archivos de plantilla para VMT.
 
 ## Cómo realizar la integración en cualquier *mod* de arma
 1. Copia el directorio `scripts/` directamente dentro de la carpeta de tu *mod* de arma.
-2. Crea un archivo nuevo en `scripts/vscripts/hevko/weapons/nombre_de_tu_script.nut` (puedes elegir cualquier nombre ASCII, como el de tu *mod* o arma), pega una de las dos plantillas siguientes y sustituye el *classname* y las rutas de materiales por los de tu *mod*.
+2. Crea un archivo nuevo en `scripts/vscripts/hevko/weapons/nombre_de_tu_script.nut` (puedes elegir cualquier nombre ASCII, como el de tu *mod* o arma), pega una de las tres plantillas siguientes y sustituye el *classname* y las rutas de materiales por los de tu *mod*.
 3. Añade la línea `IncludeScript("hevko/weapons/nombre_de_tu_script", getroottable())` en `scripts/vscripts/hevko/registry.nut`. Si tu servidor ya utiliza una colección `director_base_addon.nut` distinta, simplemente añade `IncludeScript("hevko/core", getroottable())` junto con la línea de registro en dicho archivo.
 4. En la sección `"Proxies"` de cada archivo `.vmt` listado, añade `"MaterialModify" { "dummy" "0" }` (para `mode = "scalar"`, utiliza `templates/hevko_scalar_unlit.vmt` o `templates/hevko_scalar_vertexlit.vmt`).
 
@@ -71,11 +73,31 @@ if ("Hevko" in getroottable())
 	})
 }
 ```
+Opción C — Alternancia por variación de salud (`provider = "health_delta"`, alterna `0.0` <-> `1.0` cada vez que la salud efectiva cambia en `step`):
+```squirrel
+if ("Hevko" in getroottable())
+{
+	::Hevko.RegisterWeapon("weapon_rifle", {
+		author = "Anokianx"
+		provider = "health_delta"
+		mode = "scalar"
+		varName = "$hevko_t"
+		defaultValue = "0.000"
+		lerpSpeed = 4.2
+		thresholds = {
+			step = 20.0
+		}
+		materials = [
+			"models/weapons/v_models/your_mod/glow_layer"
+		]
+	})
+}
+```
 Referencia de campos:
 - Primer argumento de `RegisterWeapon`: **debe ser el *classname* nativo del arma en L4D2**, no el nombre del *mod*.
 - `materials`: lista de rutas `.vmt` relativas a `materials/`, usando barras `/` y **sin** el prefijo `materials/` ni la extensión `.vmt`. También puedes pasar `{ material = "...", varName = "$color" }` para especificar la variable por material y opcionalmente añadir `worldMaterials = [ ... ]` para la tercera persona.
 - `varName`: variable del VMT que se va a controlar (`"$selfillumtint"` o `"$color"` en `mode = "color"`; `"$hevko_t"` en `mode = "scalar"`).
-- `thresholds`: `highMin` (nivel alto) y `midMin` (nivel medio; por debajo es nivel bajo).
+- `thresholds`: en `health`, `highMin` (nivel alto) y `midMin` (nivel medio; por debajo es nivel bajo); en `health_delta`, `step` (variación mínima de salud para alternar `0.0 <-> 1.0`, por defecto `20.0`).
 - `lerpSpeed`: velocidad de transición suave (por defecto `7.5`).
 
 ## Nombres de clase (*Classnames*) comunes en L4D2

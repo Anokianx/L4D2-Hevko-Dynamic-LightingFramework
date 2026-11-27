@@ -7,22 +7,24 @@
 Hevko 是一个面向 *Left 4 Dead 2* 的通用、武器无关的动态状态光效驱动框架。核心脚本仅计算并输出状态值，不耦合具体枪模与贴图效果，可直接打包进任意武器皮肤 `.vpk` 中使用。
 
 ## 特性
-- **内置 3 阈值血量状态源（Health Provider）**：自动合并永久血量与临时虚血（药丸/肾上腺素），并将倒地或挂边状态判定为低血量警戒区间；支持平滑插值过渡。
+- **内置 3 阈值血量状态源（`health`）**：自动合并永久血量与临时虚血（药丸/肾上腺素），并将倒地或挂边状态判定为低血量警戒区间；支持平滑插值过渡。
+- **内置血量变动切换状态源（`health_delta`）**：合并永久血量与临时虚血，有效血量相对上次切换点每增减达到 `thresholds.step`（默认 `20.0`）时，在 `0.0` 与 `1.0` 之间翻转一次；复活或换图重开时自动重置锚点。
 - **两种接入模式**：
   1. `mode = "color"`：零 VMT 数学表达式，仅需在 `.vmt` 内添加 `"MaterialModify" { "dummy" "0" }`，直接在武器配置里写三档 RGB 颜色。
-  2. `mode = "scalar"`：输出平滑变量 `$hevko_t`（`0.0` 低 / `0.5` 中 / `1.0` 高），交由每把枪自己的 `.vmt` 独立演算颜色、脉冲节奏、纹理流速或旋转速度。
+  2. `mode = "scalar"`：输出平滑变量 `$hevko_t`（`health` 为 `0.0` 低 / `0.5` 中 / `1.0` 高；`health_delta` 为 `0.0` / `1.0` 切换），交由每把枪自己的 `.vmt` 独立演算颜色、脉冲节奏、纹理流速或旋转速度。
 
 ## 目录结构
 - `scripts/vscripts/director_base_addon.nut`：自动引导入口
 - `scripts/vscripts/hevko/core.nut`：多人跟踪与平滑插值核心引擎
-- `scripts/vscripts/hevko/providers/health.nut`：血量检测状态源
+- `scripts/vscripts/hevko/providers/health.nut`：3 阈值血量检测状态源
+- `scripts/vscripts/hevko/providers/health_delta.nut`：血量累积变动翻转状态源（默认 `step = 20.0`）
 - `scripts/vscripts/hevko/registry.nut`：武器配置文件加载清单
-- `scripts/vscripts/hevko/weapons/`：各武器独立注册配置（如 `example_color.nut`、`example_scalar.nut`）
+- `scripts/vscripts/hevko/weapons/`：各武器独立注册配置（如 `example_color.nut`、`example_scalar.nut`、`example_health_delta.nut`）
 - `templates/`：VMT 模板文件
 
 ## 如何快速接入任意武器 MOD
 1. 将 `scripts/` 目录直接复制进你的武器 MOD 目录中。
-2. 新建 `scripts/vscripts/hevko/weapons/你的脚本名.nut`（文件名可自由起，如用 MOD 名或武器名，建议使用英文/数字/下划线），将下面两种模板之一复制进去，并修改武器类名和材质路径。
+2. 新建 `scripts/vscripts/hevko/weapons/你的脚本名.nut`（文件名可自由起，如用 MOD 名或武器名，建议使用英文/数字/下划线），将下面三种模板之一复制进去，并修改武器类名和材质路径。
 3. 在 `scripts/vscripts/hevko/registry.nut` 中追加一行 `IncludeScript("hevko/weapons/你的脚本名", getroottable())`。若你的自建服务器已使用其他 `director_base_addon.nut` 合集，只需在其中加上 `IncludeScript("hevko/core", getroottable())` 与注册行即可。
 4. 在需要联动的每个 `.vmt` 文件 `"Proxies"` 中加入 `"MaterialModify" { "dummy" "0" }`（使用 `mode = "scalar"` 时可直接套用 `templates/hevko_scalar_unlit.vmt` 或 `templates/hevko_scalar_vertexlit.vmt`）。
 
@@ -71,11 +73,31 @@ if ("Hevko" in getroottable())
 	})
 }
 ```
+方案 C — 血量变动翻转模式（`provider = "health_delta"`，有效血量每变化 `step` 自动在 `0.0` 与 `1.0` 间切换）：
+```squirrel
+if ("Hevko" in getroottable())
+{
+	::Hevko.RegisterWeapon("weapon_rifle", {
+		author = "Anokianx"
+		provider = "health_delta"
+		mode = "scalar"
+		varName = "$hevko_t"
+		defaultValue = "0.000"
+		lerpSpeed = 4.2
+		thresholds = {
+			step = 20.0
+		}
+		materials = [
+			"models/weapons/v_models/your_mod/glow_layer"
+		]
+	})
+}
+```
 字段说明：
 - `RegisterWeapon` 第一个参数：**必须填 L4D2 游戏原版武器类名（Classname）**，不能填 MOD 名。
 - `materials`：需要联动的 `.vmt` 路径列表，相对 `materials/` 目录，统一使用正斜杠 `/`，**不带**开头的 `materials/` 和末尾的 `.vmt`。单个条目也支持写成 `{ material = "...", varName = "$color" }` 单独指定变量；另可选填 `worldMaterials = [ ... ]` 精简第三人称联动材质数量。
 - `varName`：要驱动的 VMT 变量名（`color` 模式常用 `"$selfillumtint"` 或 `"$color"`；`scalar` 模式默认 `"$hevko_t"`）。
-- `thresholds`：`highMin`（≥ 此值为高血量档），`midMin`（≥ 此值为中血量档，低于此值为低血量档）。
+- `thresholds`：`health` 使用 `highMin`（≥ 此值为高血量档）与 `midMin`（≥ 此值为中血量档，低于为低血量档）；`health_delta` 使用 `step`（触发 `0.0 <-> 1.0` 翻转的血量变化步长，默认 `20.0`）。
 - `lerpSpeed`：过渡平滑速度（数值越大切换越快，默认 `7.5`）。
 
 ## 常见 L4D2 武器类名对照
